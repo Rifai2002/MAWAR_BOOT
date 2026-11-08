@@ -6,6 +6,8 @@ lavalink:
   plugins:
     - dependency: "dev.lavalink.youtube:youtube-plugin:1.13.5"
       snapshot: false
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.8.1"
+      snapshot: false
   server:
     password: "${LAVALINK_PASSWORD:youshallnotpass}"
     sources:
@@ -21,7 +23,24 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
+    oauth:
+      enabled: true
     clients:
       - MUSIC
-      - ANDROID_TESTSUITE
       - WEB
+      - WEBEMBEDDED
+      - TVHTML5EMBEDDED
+  lavasrc:
+    providers:
+      - "ytsearch:\"%ISRC%\""
+      - "ytsearch:%QUERY%"
+      - "scsearch:%QUERY%"
+    sources:
+      spotify: true
+      applemusic: false
+      deezer: false
+      yandexmusic: false
+    spotify:
+      clientId: "776c7b7ab5ab4b93b81fc238fe7b31cd"
+      clientSecret: "4cebc2e1d64247c9b5d87dba9c70e464"
+      countryCode: "ID"
