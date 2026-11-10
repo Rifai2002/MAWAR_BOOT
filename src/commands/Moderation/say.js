@@ -3,6 +3,7 @@ import {
     PermissionFlagsBits,
     ChannelType,
     MessageFlags,
+    EmbedBuilder,
 } from 'discord.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -32,7 +33,7 @@ function resolveTargetChannel(interaction) {
 export default {
     data: new SlashCommandBuilder()
         .setName('say')
-        .setDescription('Send a plain message as the bot')
+        .setDescription('Send a message as the bot')
         .addStringOption((option) =>
             option
                 .setName('message')
@@ -46,6 +47,19 @@ export default {
                 .setDescription('Channel to send in (defaults to the current channel)')
                 .addChannelTypes(...TEXT_CHANNEL_TYPES)
                 .setRequired(false),
+        )
+        .addBooleanOption((option) =>
+            option
+                .setName('embed')
+                .setDescription('Send the message as an embed')
+                .setRequired(false),
+        )
+        .addStringOption((option) =>
+            option
+                .setName('title')
+                .setDescription('Embed title (only used if embed is true)')
+                .setRequired(false)
+                .setMaxLength(256),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
@@ -67,6 +81,9 @@ export default {
 
         const rawMessage = interaction.options.getString('message');
         const message = sanitizeInput(rawMessage, 2000);
+        const useEmbed = interaction.options.getBoolean('embed') ?? false;
+        const rawTitle = interaction.options.getString('title');
+        const title = rawTitle ? sanitizeInput(rawTitle, 256) : null;
 
         if (!message) {
             return replyUserError(interaction, {
@@ -100,7 +117,27 @@ export default {
             });
         }
 
-        const sentMessage = await channel.send({ content: message });
+        if (useEmbed && !botPermissions?.has(PermissionFlagsBits.EmbedLinks)) {
+            return replyUserError(interaction, {
+                type: ErrorTypes.PERMISSION,
+                message: `I do not have Embed Links permission in ${channel}.`,
+            });
+        }
+
+        let payload;
+        if (useEmbed) {
+            const embed = new EmbedBuilder()
+                .setDescription(message)
+                .setColor(0xFF69B4);
+            if (title) {
+                embed.setTitle(title);
+            }
+            payload = { embeds: [embed] };
+        } else {
+            payload = { content: message };
+        }
+
+        const sentMessage = await channel.send(payload);
 
         await logEvent({
             client,
@@ -117,6 +154,7 @@ export default {
                     messageId: sentMessage.id,
                     moderatorId: interaction.user.id,
                     messageLength: message.length,
+                    embed: useEmbed,
                 },
             },
         });
